@@ -5,6 +5,7 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
+// 🧠 Prompt système Aura
 const SYSTEM_PROMPT = `
 Tu es "Aura Design Agent", expert en Event Storming.
 À chaque message de l'utilisateur, tu dois :
@@ -37,6 +38,15 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
+    // 🔥 Protection anti-null / undefined / mauvais formats venant du frontend
+    const safeMessages = (messages || [])
+      .filter((m: any) => m && typeof m.content === "string")
+      .map((m: any) => ({
+        role: m.role || "user",
+        content: m.content ?? ""
+      }));
+
+    // 📡 Appel OpenAI
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: {
@@ -56,14 +66,8 @@ export async function POST(req: Request) {
                   commands: { type: "array", items: { type: "string" } },
                   aggregates: { type: "array", items: { type: "string" } },
                   policies: { type: "array", items: { type: "string" } },
-                  externalSystems: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
-                  dataObjects: {
-                    type: "array",
-                    items: { type: "string" }
-                  },
+                  externalSystems: { type: "array", items: { type: "string" } },
+                  dataObjects: { type: "array", items: { type: "string" } },
                   issues: { type: "array", items: { type: "string" } },
                   steps: { type: "array", items: { type: "string" } },
                   contexts: { type: "array", items: { type: "string" } }
@@ -76,19 +80,3 @@ export async function POST(req: Request) {
         }
       },
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...messages,
-      ],
-    });
-
-    const output = completion.choices[0].message;
-
-    return NextResponse.json(JSON.parse(output!.content!));
-  } catch (error: any) {
-    console.error("API ERROR:", error);
-    return NextResponse.json(
-      { error: "Erreur interne Aura", details: error.message },
-      { status: 500 }
-    );
-  }
-}
