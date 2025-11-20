@@ -80,3 +80,29 @@ export async function POST(req: Request) {
         }
       },
       messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...safeMessages,
+      ],
+    });
+
+    const output = completion.choices[0].message;
+
+    // 🧩 Vérification finale
+    if (!output?.content) {
+      throw new Error("OpenAI returned an empty content field");
+    }
+
+    // 📦 Retour au frontend
+    return NextResponse.json(JSON.parse(output.content));
+  } catch (error: any) {
+    console.error("API ERROR:", error);
+
+    return NextResponse.json(
+      {
+        error: "Erreur interne Aura",
+        details: error?.message || "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}
